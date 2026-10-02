@@ -1,0 +1,64 @@
+LINUX COMMANDS - CLOUDWATCH INCIDENT INVESTIGATION
+
+1. UPDATE SYSTEM
+
+sudo dnf update -y
+
+2. INSTALL CLOUDWATCH AGENT
+
+sudo dnf install amazon-cloudwatch-agent -y
+
+3. CREATE INCIDENT LOG FILE
+
+sudo touch /var/log/incident-app.log
+sudo chmod 644 /var/log/incident-app.log
+
+4. GENERATE APPLICATION AND INCIDENT LOGS
+
+sudo bash -c 'cat >> /var/log/incident-app.log <<EOF
+$(date "+%Y-%m-%d %H:%M:%S") INFO Application started successfully
+$(date "+%Y-%m-%d %H:%M:%S") INFO User login successful
+$(date "+%Y-%m-%d %H:%M:%S") INFO Request processed successfully
+$(date "+%Y-%m-%d %H:%M:%S") WARNING Application response time is high
+$(date "+%Y-%m-%d %H:%M:%S") ERROR Database connection failed
+$(date "+%Y-%m-%d %H:%M:%S") ERROR API request failed
+$(date "+%Y-%m-%d %H:%M:%S") ERROR Database connection failed
+$(date "+%Y-%m-%d %H:%M:%S") CRITICAL Database service unavailable
+EOF'
+
+5. VIEW LOGS
+
+cat /var/log/incident-app.log
+
+6. CLOUDWATCH AGENT CONFIGURATION
+
+sudo tee /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json > /dev/null <<'EOF'
+{
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/log/incident-app.log",
+            "log_group_name": "/incident-investigation/application",
+            "log_stream_name": "{instance_id}/incident-app",
+            "timezone": "UTC"
+          }
+        ]
+      }
+    }
+  }
+}
+EOF
+
+7. START CLOUDWATCH AGENT
+
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
+
+8. CHECK CLOUDWATCH AGENT
+
+sudo systemctl status amazon-cloudwatch-agent --no-pager
+
+9. GENERATE TEST INCIDENT
+
+echo "$(date '+%Y-%m-%d %H:%M:%S') ERROR TEST INCIDENT FOR ALARM" | sudo tee -a /var/log/incident-app.log
