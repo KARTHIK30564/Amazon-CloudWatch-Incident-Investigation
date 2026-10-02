@@ -1,0 +1,27 @@
+CLOUDWATCH LOGS INSIGHTS QUERIES
+
+1. SHOW ALL LOGS
+
+fields @timestamp, @message
+| sort @timestamp asc
+| limit 20
+
+
+2. FIND ERROR AND CRITICAL INCIDENTS
+
+fields @timestamp, @message
+| filter @message like /ERROR|CRITICAL/
+| sort @timestamp desc
+
+
+3. COUNT ERRORS
+
+filter @message like /ERROR/
+| stats count() as ErrorCount
+
+
+4. ERROR TREND OVER TIME
+
+filter @message like /ERROR/
+| stats count() as ErrorCount by bin(5m)
+| sort @timestamp asc
